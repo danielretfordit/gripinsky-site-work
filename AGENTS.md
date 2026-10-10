@@ -4,6 +4,22 @@
 
 Общение с заказчицей на русском, коротко.
 
+## Быстрый старт для Codex и других агентов (рабочая копия заказчицы)
+Это рабочая копия `danielretfordit/gripinsky-site-work`. Эталонная версия без экспериментов: `danielretfordit/gripinsky-site-preview`. Правки делать здесь, эталон не трогать.
+
+- Установка и проверка: `npm ci`, затем `npm run build`, `npm test`, `npm run lint:copy`, `npm run lint:css`. Перед коммитом все проверки должны пройти.
+- Посмотреть сайт: `npm run dev` (http://localhost:4321), админка `/keystatic`.
+- Публикация: каждый пуш в `main` за 5–10 минут собирает и выкладывает предпросмотр https://danielretfordit.github.io/gripinsky-site-work/ (`.github/workflows/deploy-pages.yml`).
+- Оформление только по `docs/design/guidelines.md` и навыку `.claude/skills/gripinsky-design/SKILL.md`: токены и классы из `src/styles/global.css`, без своих цветов и размеров в px.
+- Нельзя:
+  - менять расчёт цен вне `src/lib/pricing.ts`;
+  - класть секреты в git;
+  - править цитаты учеников;
+  - публиковать работы и истории без согласия (`consent`);
+  - использовать запрещённые слова и символы из раздела «Правила».
+- Если меняешь поля данных, правь сразу три места: схему `src/content.config.ts`, админку `keystatic.config.ts` и данные. `npm test` проверяет их совпадение.
+- Перед правкой вёрстки проверь страницу на 375 и 1440 px. После правки `node scripts/audit-rhythm.mjs` должен показывать 0 слипшихся мест.
+
 ## Команды
 - `npm run dev`: dev-сервер на http://localhost:4321 (в Astro 7 уходит в фон; `npx astro dev stop` останавливает). Админка контента: http://localhost:4321/keystatic
 - `npm run build`: проверка типов и схем, затем сборка в `dist/`
