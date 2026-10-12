@@ -1,6 +1,5 @@
 ---
 import PromoBanner from '../components/PromoBanner.astro';
-import { Image } from 'astro:assets';
 import { getCollection, getEntry } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
@@ -8,12 +7,12 @@ import CourseCard from '../components/CourseCard.astro';
 import { CATEGORIES, isListed } from '../lib/categories';
 import { SOFTWARE_NAMES as SOFT_NAMES } from '../lib/software';
 import { SITE } from '../lib/seo';
-import vizImg from '../assets/works/bolshunova-ostrov-1.jpg';
 
 const bundle = (await getEntry('settings', 'site'))!.data.bundle;
+const maxDiscount = Math.max(0, ...bundle.tiers.map(t => t.pct));
 const courses = (await getCollection('courses')).filter((c) => isListed(c.data)).sort((a, b) => {
   const order = { package: 0, course: 1, free: 2, plugin: 3, service: 4 } as const;
-  return order[a.data.type] - order[b.data.type] || a.data.price - b.data.price;
+  return order[a.data.type] - order[b.data.type] || Number(a.data.pricePending) - Number(b.data.pricePending) || a.data.price - b.data.price;
 });
 const types = [
   { id: 'all', label: 'Все' },
@@ -38,26 +37,11 @@ const crumbs = [{ name: 'Главная', href: '/' }, { name: 'Курсы' }];
     <Breadcrumbs items={crumbs} class="mb-6" />
     <div class="mb-8 flex flex-col gap-3">
       <span class="t-overline">Каталог</span>
-      <h1 id="catalog-title" class="t-display">Все курсы <span class="t-accent">академии</span></h1>
-      <p class="t-lead">Выберите курсы и соберите свой пакет. Корзина сохранит выбор и автоматически рассчитает скидку.</p>
+      <div class="catalog-heading"><h1 id="catalog-title" class="t-display">Все курсы <span class="t-accent">академии</span></h1><a href="/#quiz" class="catalog-help link t-small">Подобрать обучение →</a></div>
+      <p class="t-lead">Выберите курс. При покупке нескольких курсов скидка до {maxDiscount}%.</p>
     </div>
 
     <PromoBanner placement="catalog-top" class="mb-8" />
-    <a href="/courses-page/visualization" class="lift media-frame mb-10 grid bg-surface-2 text-ink hover:text-ink md:grid-cols-[5fr_7fr]">
-      <Image src={vizImg} alt="«Остров», работа ученицы Юлии Большуновой" widths={[480, 800, 1200]} sizes="(min-width: 1024px) 42vw, 100vw" class="h-[clamp(220px,40vw,320px)] w-full object-cover md:h-full" />
-      <span class="flex flex-col gap-3 p-6 md:p-10">
-        <span class="t-overline">Направление</span>
-        <span class="t-h2 catalog-direction__title"><span class="whitespace-nowrap">3D-визуализация</span> <span class="t-accent block">с нуля до заказов</span></span>
-        <span class="text-ink-2">База в 3ds Max и Corona, затем профессия: интерьеры, экстерьеры и ЖК или модели для стоков. Соберите пакет и сразу увидите цену.</span>
-        <span class="font-semibold text-ink" data-cta>Подобрать курс →</span>
-      </span>
-    </a>
-
-    <div class="t-small mb-7 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-line py-4 text-ink-2" aria-label="Скидки за количество">
-      <b>Ваш пакет, ваша подборка</b>
-      {[...bundle.tiers].sort((a,b) => a.min-b.min).map((t) => <span>От {t.min} курсов: −{t.pct}%</span>)}
-      <span class="t-caption w-full text-muted">База остаётся готовым пакетом. Уровни 1, 2 и 3 также доступны отдельно. Условия скидки показаны в корзине.</span>
-    </div>
     <div id="catalog-filters" class="catalog-tools" data-filters>
       <div role="group" aria-label="Тип" class="catalog-tabs">
         {types.map((t, i) => (
@@ -96,7 +80,7 @@ const crumbs = [{ name: 'Главная', href: '/' }, { name: 'Курсы' }];
       <p class="catalog-note" data-sort-note aria-live="polite"></p>
     </div>
 
-    <div class="grid gap-5 sm:grid-cols-2 md:grid-cols-3" data-grid>
+    <div class="catalog-grid" data-grid>
       {courses.map((c) => <CourseCard course={c} headingLevel="h2" />)}
     </div>
     <p class="mt-6 hidden text-muted" data-empty>Таких курсов пока нет. Попробуйте другой фильтр или <a href="#consult" class="link">спросите на консультации</a>.</p>
@@ -138,7 +122,7 @@ const crumbs = [{ name: 'Главная', href: '/' }, { name: 'Курсы' }];
       if (!c.hidden) shown++;
     }
     const ordered = [...cards];
-    if (sort === 'asc' || sort === 'desc') ordered.sort((a, b) => (Number(a.dataset.price) - Number(b.dataset.price)) * (sort === 'asc' ? 1 : -1));
+    if (sort === 'asc' || sort === 'desc') ordered.sort((a, b) => Number(a.hasAttribute('data-price-pending')) - Number(b.hasAttribute('data-price-pending')) || (Number(a.dataset.price) - Number(b.dataset.price)) * (sort === 'asc' ? 1 : -1));
     if (sort === 'newest') ordered.sort((a, b) => Number(b.dataset.new) - Number(a.dataset.new) || (b.dataset.published ?? '').localeCompare(a.dataset.published ?? ''));
     if (sort === 'popular') ordered.sort((a, b) => Number(a.dataset.popularity || Infinity) - Number(b.dataset.popularity || Infinity));
     ordered.forEach((c) => grid.appendChild(c));
@@ -175,8 +159,14 @@ const crumbs = [{ name: 'Главная', href: '/' }, { name: 'Курсы' }];
 </script>
 
 <style>
-  /* Заголовок карточки направления: меньше H2 страницы, «3D-визуализация» не рвётся по дефису */
-  .catalog-direction__title { font-size: clamp(1.625rem, 7.4vw, var(--type-section)); }
+  .catalog-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:stretch; }
+  @media(min-width:768px) { .catalog-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media(min-width:1280px) { .catalog-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; } }
+
+  .catalog-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--stack-tight) var(--space-head); }
+  .catalog-heading h1 { margin:0; }
+  .catalog-help { display:inline-flex; align-items:center; min-height:var(--tap); flex-shrink:0; }
+
   .catalog-tools { margin-bottom: 32px; scroll-margin-top: calc(var(--header-h) + 16px); }
   .catalog-tabs { display: flex; gap: 28px; border-bottom: 1px solid var(--color-line); overflow-x: auto; }
   .catalog-tabs button { flex: 0 0 auto; min-height: 56px; padding: 12px 0; position: relative; color: var(--color-muted); font-size: var(--type-body); font-weight: 600; cursor: pointer; }

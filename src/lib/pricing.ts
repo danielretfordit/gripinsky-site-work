@@ -40,6 +40,8 @@ export interface Catalog {
   }>;
   /** Все курсы, которые можно купить отдельно и положить в набор */
   courses: Record<string, SetCourse>;
+  /** Условия курса для отображения в корзине; не участвуют в расчёте цены. */
+  termsById?: Record<string, { accessDuration?: string | null; supportDuration?: string | null }>;
   tiers: Tier[];
   installmentMonths: number;
 }

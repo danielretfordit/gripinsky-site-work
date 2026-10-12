@@ -1,0 +1,50 @@
+{
+  "title": "Художественная постобработка рендеров",
+  "short": "Художественная постобработка готовых рендеров в Adobe Photoshop. 47 видеоуроков для продвинутого уровня.",
+  "legacyPath": "/artrender",
+  "status": "active",
+  "type": "course",
+  "price": 0,
+  "pricePending": true,
+  "oldPrice": null,
+  "professions": [
+    "Визуализация",
+    "Интерьер",
+    "Экстерьер",
+    "Постобработка"
+  ],
+  "software": [
+    "ADOBE PHOTOSHOP"
+  ],
+  "level": "Продвинутый",
+  "lessons": 47,
+  "meta": "47 видеоуроков",
+  "description": "Курс художественной постобработки рендеров в Adobe Photoshop. Программа рассчитана на продвинутый уровень и включает 47 видеоуроков. Преподаватель курса: Евгений Грипинский.",
+  "teachers": [
+    "gripinsky"
+  ],
+  "learning": [
+    {
+      "title": "Видеоуроки",
+      "text": "47 видеоуроков по художественной постобработке рендеров в Adobe Photoshop."
+    }
+  ],
+  "included": [
+    "47 видеоуроков."
+  ],
+  "related": [
+    "azbukaps",
+    "art_pro",
+    "vizualization3"
+  ],
+  "studyDuration": "2–3 мес.",
+  "accessDuration": "12 мес.",
+  "supportDuration": "6 мес.",
+  "seo": {
+    "title": "Художественная постобработка рендеров в Photoshop | GRIPINSKY",
+    "description": "47 видеоуроков по художественной постобработке рендеров в Adobe Photoshop для продвинутого уровня. Преподаватель курса: Евгений Грипинский."
+  },
+  "getcourse": {
+    "offerCode": ""
+  }
+}

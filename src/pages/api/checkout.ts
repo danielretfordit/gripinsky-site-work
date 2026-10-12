@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (!Number.isFinite(q.total) || q.total <= 0) return json({ ok: false, error: 'empty_cart' }, 422);
   } else if (body.kind === 'course') {
     const entry = (await getCollection('courses')).find((x) => x.id === String(s.id ?? ''));
-    if (!entry || entry.data.status !== 'active' || entry.data.price <= 0 || entry.data.type === 'package') return json({ ok: false, error: 'course' }, 422);
+    if (!entry || entry.data.status !== 'active' || entry.data.pricePending || entry.data.price <= 0 || entry.data.type === 'package') return json({ ok: false, error: 'course' }, 422);
     q = quoteCourse({ id: entry.id, name: entry.data.title, price: entry.data.price }, cat.installmentMonths);
   } else if (body.kind === 'base' || body.kind === 'package') q = body.kind === 'base'
     ? quoteBaseOnly(cat, tariff)

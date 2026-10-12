@@ -88,7 +88,7 @@ const stats = [
   <section id="directions" class="wrap section" aria-labelledby="dir-title">
     <div id="programs" class="head">
       <p class="t-overline m-0">Направления и программы</p>
-      <h2 id="dir-title" class="t-h2" tabindex="-1">Выберите <span class="t-accent">курс</span></h2>
+      <h2 id="dir-title" class="t-h2" tabindex="-1">Выберите <span class="t-accent">направление</span></h2>
       <p class="directions-intro text-ink-2">Начните с направления, если выбираете профессию. Или сразу найдите курсы по программе, если уже знаете, что нужно.</p>
     </div>
 
@@ -184,7 +184,6 @@ const stats = [
     max-width: 100%;
     gap: clamp(20px, 3vw, 40px);
     margin-bottom: 32px;
-    border-bottom: 1px solid var(--color-line);
   }
   .program-tab {
     position: relative;
@@ -343,8 +342,6 @@ const stats = [
     background: none;
     overflow: visible;
   }
-  .site-home .stats-ribbon__list::before { position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--color-line); content: ""; }
-  .site-home .stats-ribbon__list::after { position: absolute; bottom: -1px; left: 0; width: 42px; height: 2px; background: var(--color-lime); content: ""; }
   .site-home .stats-ribbon__item { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0; border: 0; }
   .site-home .stats-ribbon__item dt { order: 2; max-width: 20ch; color: var(--color-muted); font-size: var(--type-label); font-weight: 600; line-height: 1.5; letter-spacing: .12em; text-transform: uppercase; }
   .site-home .stats-ribbon__item dd { order: 1; }
@@ -358,7 +355,7 @@ const stats = [
     .site-home .stats-ribbon__item + .stats-ribbon__item { border-left: 1px solid var(--color-line); }
   }
 
-  /* Заголовки секций главной: надзаголовок, H2 в две строки, пояснение справа (от 768 px) */
+  /* Заголовки секций главной: направления на всю ширину, работы с пояснением справа (от 768 px) */
   .site-home :is(#directions .head, .home-works > .head) {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -370,8 +367,8 @@ const stats = [
   .site-home :is(#directions .head h2, .home-works .head h2, #ai .ai-feature h2, #club .community-feature__copy h2, #faq .t-h2) {
     margin-top: 18px; font-size: var(--type-section); line-height: .98; letter-spacing: -.038em;
   }
-  .site-home :is(#directions .head h2, .home-works .head h2) span { display: block; color: var(--color-heading-muted); }
-  .site-home #directions .head h2 { grid-column: 1; grid-row: 2; }
+  .site-home .home-works .head h2 span { display: block; color: var(--color-heading-muted); }
+  .site-home #directions .head h2 { grid-column: 1 / -1; grid-row: 2; }
   .site-home :is(.directions-intro, #directions .head > :last-child) { display: none; }
   .site-home :is(.ai-feature__dot, .community-feature__eyebrow span, .eyebrow i) { display: none; }
   @media (min-width: 768px) {

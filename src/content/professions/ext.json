@@ -63,6 +63,10 @@
       "text": "Photoshop с нуля для обработки и подачи готового рендера"
     },
     {
+      "course": "artrender",
+      "text": "Художественная постобработка готовых рендеров в Photoshop"
+    },
+    {
       "course": "forest-railclone",
       "text": "Растительность, ограждения и повторяющиеся элементы окружения"
     },
@@ -77,5 +81,14 @@
     "title": "Курсы визуализации экстерьера и ЖК онлайн | GRIPINSKY",
     "description": "Курсы экстерьерной визуализации и масштабных ЖК в 3ds Max и Corona: проект по реальному ТЗ, Forest Pack в подарок, синематик. От 32 900 ₽, рассрочка.",
     "h1": "Визуализатор экстерьеров и ЖК: обучение с нуля"
-  }
+  },
+  "fullPack": [
+    "baza",
+    "exteriorpro",
+    "residential_complex",
+    "forest-railclone",
+    "materialspro",
+    "azbukaps",
+    "artrender"
+  ]
 }

@@ -162,6 +162,8 @@ const courses = defineCollection({
     type: z.enum(COURSE_TYPES),
     /** Текущая цена в рублях; 0 у бесплатных */
     price: z.number().int().nonnegative(),
+    /** Стоимость ещё не задана: не показывать 0 как бесплатный курс и не продавать. */
+    pricePending: z.boolean().default(false),
     /** Цена без поддержки (цена price включает чат поддержки). Пусто: на треть дешевле, до …900 ₽ */
     selfPrice: z.number().int().positive().nullish(),
     /** Только реальная прежняя цена. Придуманные «старые» цены не указываем */
@@ -175,6 +177,10 @@ const courses = defineCollection({
     popularityRank: z.number().int().positive().nullish(),
     lessons: z.number().int().nullish(),
     meta: z.string().nullish(),
+    studyDuration: z.string().nullish(),
+    accessDuration: z.string().nullish(),
+    /** Срок поддержки в формате с чатом; самостоятельное обучение её не включает */
+    supportDuration: z.string().nullish(),
     description: z.string().nullish(),
     forWhom: z.array(z.string()).default([]),
     outcomes: z.array(z.string()).default([]),
@@ -247,6 +253,8 @@ const professions = defineCollection({
       blocks: z.array(z.string()),
     })).min(1),
     gift: z.object({ course: reference('courses'), text: z.string() }),
+    /** Полный набор с базой и дополнительными курсами. Подарки учитывает общий расчёт. */
+    fullPack: z.array(reference('courses')).default([]),
     addons: z.array(z.object({ course: reference('courses'), text: z.string() })),
     portfolio: z.string(),
     seo: z.object({ title: z.string(), description: z.string(), h1: z.string() }),

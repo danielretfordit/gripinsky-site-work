@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import HeroActions from './HeroActions.astro';
+import CourseTerms from './CourseTerms.astro';
 import { rub } from '../lib/format';
 import { softwareName } from '../lib/software';
 import interior from '../assets/home/ba-render.jpg';
@@ -14,7 +15,8 @@ const hero=id==='interiorpro'?interior:c.cover;
   <p class="t-overline">Курс / {c.level}</p><h1 id="course-title" class="t-display normal-case">{c.title}</h1>
   <p class="t-lead">{c.short || c.description}</p>
   <dl class="facts course-hero__facts">{c.lessons && <div><dt>{c.meta?.replace(/^\d+\s*/, '') || 'видеоуроков'}</dt><dd>{c.lessons}</dd></div>}<div><dt>инструменты курса</dt><dd class="course-hero__soft">{c.software.slice(0,2).map(softwareName).join(' + ')}</dd></div></dl>
-  <HeroActions primaryHref="#course-price" primaryLabel={`Выбрать курс, ${rub(c.price)}`} secondaryHref="#course-program" secondaryLabel="Посмотреть программу" />
+  <CourseTerms course={c} />
+  {c.pricePending ? <><p class="t-small text-muted">Стоимость уточняется</p><div class="course-hero__actions"><a href="#consult" class="btn btn-primary">Уточнить стоимость <span aria-hidden="true">↗</span></a>{(c.modules.length > 0 || c.blocks.length > 0) && <a href="#course-program" class="btn btn-secondary">Посмотреть программу <span class="arrow-long" aria-hidden="true"></span></a>}</div></> : <HeroActions primaryHref="#course-price" primaryLabel={`Выбрать курс, ${rub(c.price)}`} secondaryHref="#course-program" secondaryLabel="Посмотреть программу" />}
   {c.trial && <a href={c.trial} class="link t-small">Сначала бесплатные уроки →</a>}
  </div>
  {hero && <figure class="course-hero__picture"><div class="t-overline course-hero__signature"><span>Академия 3D GRIPINSKY</span><span>Курс / 3D</span></div><div class="media-frame media-frame--portrait"><Image src={hero} alt={`Визуальные материалы курса «${c.title}»`} widths={[480,800,1200]} sizes="(min-width:1024px) 40vw, 90vw" loading="eager" fetchpriority="high" /></div><figcaption class="t-small text-muted">{id==='interiorpro'?'Интерьерная визуализация':'Визуальные материалы курса'}<span>{c.software.map(softwareName).join(', ')}</span></figcaption></figure>}

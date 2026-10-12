@@ -3,6 +3,7 @@ import { getEntry } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import BeforeAfter from '../components/BeforeAfter.astro';
+import CourseTerms from '../components/CourseTerms.astro';
 import { rub, sp } from '../lib/format';
 import { courseLd, ogHref } from '../lib/seo';
 import meshRaw from '../assets/ai/mesh-raw.jpg';
@@ -51,6 +52,7 @@ const ld = [
         <h1 id="ai-title" class="t-display">ИИ в 3D: <span class="t-accent">нейросети для <span class="whitespace-nowrap">3D-моделей</span></span></h1>
         <p class="t-quote m-0">ИИ не заменит 3D-художника. Его заменит художник с ИИ</p>
         <p class="t-lead">Весь пайплайн: от референса и 3D-модели по фото до рендера в интерьере. Нейросети помогают с черновыми этапами, а вы проверяете геометрию и доводите результат в 3ds Max.</p>
+        <CourseTerms course={ai} />
         <div class="flex flex-col gap-3 sm:flex-row">
           <a href="#tariffs" class="btn btn-primary btn-lg">Выбрать тариф, от {rub(ai.price)}</a>
           <a href="#program" class="btn btn-secondary btn-lg">Программа</a>
@@ -120,8 +122,9 @@ const ld = [
         <h3 class="t-h3">Самостоятельно</h3>
         <span><b class="t-num">{rub(ai.price)}</b> <span class="text-muted">разовый платёж</span></span>
         <ul class="m-0 flex list-none flex-col gap-2 p-0 text-ink-2">
-          <li>Все 6 шагов пайплайна в записи</li><li>Демо-модель для практики</li><li>Доступ 6 месяцев</li><li class="text-muted">Без проверки и поддержки</li>
+          <li>Все 6 шагов пайплайна в записи</li><li>Демо-модель для практики</li><li class="text-muted">Без проверки и поддержки</li>
         </ul>
+        <CourseTerms course={ai} compact support="none" />
         <button type="button" class="btn btn-secondary btn-lg mt-auto" data-cart-add="ai" disabled><span data-cart-label>В корзину</span></button>
       </article>
       <article class="flex flex-col gap-4 rounded-card bg-surface-2 p-6 md:p-8">
@@ -131,6 +134,7 @@ const ld = [
         <ul class="m-0 flex list-none flex-col gap-2 p-0 text-ink-2">
           <li>Всё из тарифа «Самостоятельно»</li><li>Обучение в группе</li><li>Живой стрим с разбором полного цикла</li><li class="text-muted">Уточните дату ближайшего потока</li>
         </ul>
+        <CourseTerms course={lab} compact />
         <button type="button" class="btn btn-primary btn-lg mt-auto" data-cart-add="ai-lab" disabled><span data-cart-label>В корзину</span></button>
       </article>
     </div>

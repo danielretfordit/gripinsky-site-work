@@ -6,6 +6,8 @@ import { heroSlides } from '../../lib/hero';
 import HeroActions from '../../components/HeroActions.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import CourseCard from '../../components/CourseCard.astro';
+import ProfessionOffers from '../../components/viz/ProfessionOffers.astro';
+import { quoteSet } from '../../lib/pricing';
 import VizProof from '../../components/viz/VizProof.astro';
 import VizReviews from '../../components/viz/VizReviews.astro';
 import { courseHref } from '../../lib/categories';
@@ -20,17 +22,37 @@ const crumbs = [{ name: 'Главная', href: '/' }, { name: 'Курсы', hre
 const professions = (await getCollection('professions')).sort((a,b) => a.data.order - b.data.order);
 const panels = await Promise.all(professions.map(async p => ({ ...p,
   addons: await Promise.all(p.data.addons.filter(a => a.course.id !== 'ai').map(async a => ({ text: a.text, course: (await getEntry('courses', a.course.id))! }))),
+  fullPack: await Promise.all(p.data.fullPack.map(c => getEntry('courses', c.id))),
   courses: await Promise.all(['modeling1','modeling2','vizualization3','ai',...p.data.courses.map(c=>c.course.id)].map(id=>getEntry('courses',id))),
 })));
 const base = (await getEntry('courses','baza'))!;
+const baseParts = await Promise.all(base.data.includes.map(c => getEntry('courses', c.id)));
+const baseOffer = {
+  title: base.data.title,
+  items: baseParts.filter(c => !!c).map(c => ({ title: c.data.title, href: courseHref(c.id, c.data) })),
+  gifts: base.data.gifts.map(g => g.name),
+  price: quoteSet(cat, { ids: [base.id], support: 'chat' }).total,
+};
+const fullOffer = (p: typeof panels[number]) => {
+  const ids = p.data.fullPack.map(c => c.id);
+  const gift = cat.professions[p.id as keyof typeof cat.professions].gift;
+  const available = ids.length > 0 && ids.every(id => id === base.id || Object.hasOwn(cat.courses, id));
+  return {
+    title: `${p.data.title} с нуля`,
+    items: p.fullPack.flatMap(c => c && c.id !== gift.id ? [{ title: c.data.title, href: c.id === base.id ? `#base-offer-title-${p.id}` : courseHref(c.id, c.data) }] : []),
+    gifts: [...baseOffer.gifts, gift.name],
+    ids,
+    price: available ? quoteSet(cat, { ids, support: 'chat' }).total : null,
+  };
+};
 const freeCourses = await Promise.all(['vizualization3_mini', 'interiorpro_mini'].map(id => getEntry('courses', id)));
 // Слайды первого экрана редактируются в админке: «Слайды первого экрана»
 const slides = await heroSlides('viz');
 ---
 <Base title="Курсы 3D-визуализации: профессии и обучение | GRIPINSKY" description="Выберите профессию 3D-визуализатора: интерьеры, экстерьеры или модели для стоков. Основные и дополнительные курсы, работы учеников и бесплатные уроки." breadcrumbs={crumbs} jsonLd={[faqSchema]} consultContext="Направление 3D-визуализация">
-  {slides[0] && <HeroWork work={slides[0]} slides={slides} kicker="Направление" id="prototype-title">
+  {slides[0] && <HeroWork work={slides[0]} slides={slides} kicker="Направление" id="prototype-title" class="hero--cinema">
     <Breadcrumbs slot="top" items={crumbs} />
-    <h1 slot="title" id="prototype-title" class="t-hero t-hero--long"><span class="whitespace-nowrap">3D-визуализация</span> <span class="t-accent block">от первых моделей<br />к вашим проектам</span></h1>
+    <h1 slot="title" id="prototype-title" class="t-hero t-hero--long">3D-визуализация <span class="t-accent block">от первых моделей<br />к вашим проектам</span></h1>
     <p slot="lead" class="t-lead">Научитесь создавать интерьеры, экстерьеры и модели для стоков. Начните с основ или выберите курсы под свой опыт. Моделирование, свет, материалы и нейросети складываются в маршрут к выбранной профессии.</p>
     <HeroActions slot="cta" primaryHref="#profession" primaryLabel="Выбрать курсы" secondaryHref="/vizualization3_mini" secondaryLabel="Попробовать бесплатно" secondaryGoal="trial_click" />
   </HeroWork>}
@@ -49,17 +71,17 @@ const slides = await heroSlides('viz');
     <div class="prototype-tabs" role="tablist" aria-label="Профессия визуализатора">{panels.map((p,i)=><button type="button" role="tab" id={`viz-tab-${p.id}`} aria-controls={`viz-panel-${p.id}`} aria-selected={i===0?'true':'false'} tabindex={i===0?0:-1} data-viz-profession={p.id} class="btn btn-secondary"><span class="profession-label-full">{p.data.title}</span><span class="profession-label-short">{p.id === 'int' ? 'Интерьеры' : p.id === 'ext' ? 'Экстерьеры' : 'Стоки'}</span></button>)}</div>
     {panels.map((p,i)=><div class="prototype-panel" id={`viz-panel-${p.id}`} role="tabpanel" aria-labelledby={`viz-tab-${p.id}`} hidden={i!==0}>
       <div class="prototype-description"><div><h3 class="t-h3">{p.data.short}</h3><p class="t-body text-ink-2">{p.data.lead}</p></div><aside class="prototype-result"><p class="t-overline text-muted">В вашем портфолио</p><p class="t-title">{p.data.portfolio}</p><a href="#works" class="link t-small">Работы учеников →</a></aside></div>
-      <h3 class="t-title prototype-section-title">Основные курсы</h3>
-      <div class="prototype-course-grid">{p.courses.map((c,index)=>c&&<div data-course-stage={p.data.courses.some(pc=>pc.course.id===c.id)?"specialization":"base"}><p class="t-overline text-muted">{String(index+1).padStart(2,'0')} / Маршрут обучения</p><CourseCard course={c} framed selectable /></div>)}</div>
-      <details id={i === 0 ? "base" : undefined} class="prototype-base"><summary class="t-title">Начинаете с нуля? Можно выбрать базу целиком<span aria-hidden="true" class="prototype-faq-plus">+</span></summary><p class="t-body text-ink-2">Уровни 1, 2 и 3 собраны в «Базу 3D-визуализатора». Корзина учитывает уже включённые курсы и подарки автоматически.</p><div class="prototype-base-card"><CourseCard course={base} framed selectable /></div></details>
+      <h3 class="t-title prototype-section-title">Проходите по порядку, выбирайте отдельные курсы или <a href={`#profession-offers-title-${p.id}`} class="link prototype-packages-link">сразу пакет</a></h3>
+      <div class="prototype-course-grid">{p.courses.map((c,index)=>c&&<div data-course-stage={p.data.courses.some(pc=>pc.course.id===c.id)?"specialization":"base"}><p class="t-num t-mono"><span class="sr-only">Шаг </span>{String(index+1).padStart(2,'0')}</p><CourseCard course={c} framed selectable /></div>)}</div>
       <h3 id={i === 0 ? "additional" : undefined} class="t-title prototype-section-title">Дополнительные курсы</h3>
       <p class="t-small text-ink-2">Усильте навыки под свои задачи. Выберите нужные инструменты, остальные можно добавить позже.</p>
       <div class="prototype-addon-grid">{p.addons.map(a => <article>
         {a.course.data.badges.length > 0 && <div class="addon-badges">{a.course.data.badges.map(b => <span class:list={['addon-badge', `addon-badge--${b.tone}`]}>{b.text}</span>)}</div>}
         <p class="t-overline">По желанию</p><h4 class="t-title"><a href={courseHref(a.course.id,a.course.data)} class="link">{a.course.data.title} ↗</a></h4>
         <p class="t-small text-ink-2">{a.text}</p><a href={courseHref(a.course.id,a.course.data)} class="link t-small">Программа курса →</a>
-        <div class="prototype-addon-buy"><b class="t-title">{rub(a.course.data.price)}</b><label class="prototype-course-select t-small"><input type="checkbox" data-cart-select={a.course.id} disabled /><span>Выбрать курс</span></label></div>
+        <div class:list={["prototype-addon-buy", { "prototype-addon-buy--pending": a.course.data.pricePending }]}>{a.course.data.pricePending ? <><span class="t-small text-muted">Стоимость уточняется</span><a href={`${courseHref(a.course.id,a.course.data)}#consult`} class="link t-small">Уточнить стоимость →</a></> : <><b class="t-title">{rub(a.course.data.price)}</b><label class="prototype-course-select t-small"><input type="checkbox" data-cart-select={a.course.id} disabled /><span>Выбрать курс</span></label></>}</div>
       </article>)}</div>
+      <div id={i === 0 ? "base" : undefined} class="prototype-offers"><ProfessionOffers professionId={p.id} professionTitle={p.data.title} portfolio={p.data.portfolio} base={baseOffer} full={fullOffer(p)} /></div>
     </div>)}
 
   </section>
@@ -88,10 +110,19 @@ const slides = await heroSlides('viz');
     tabs.forEach((t,i)=>{t.setAttribute('aria-selected',String(i===index));t.tabIndex=i===index?0:-1;});panels.forEach((p,i)=>p.hidden=i!==index);
     if(pinned)requestAnimationFrame(()=>panels[index].scrollIntoView({block:'start',behavior:'instant'}));
   };
-  const requested = new URLSearchParams(location.search).get('prof');
+  const linkedProfession = location.hash.match(/^#(?:base-offer-title|profession-offers-title)-(int|ext|stock)$/)?.[1];
+  const requested = linkedProfession ?? new URLSearchParams(location.search).get('prof');
   const requestedIndex = tabs.findIndex(tab=>tab.dataset.vizProfession===requested);
   if(requestedIndex>=0) activate(requestedIndex);
-  if(location.hash==='#base') { activate(0); const base=document.querySelector<HTMLDetailsElement>('#base'); if(base){base.open=true;requestAnimationFrame(()=>base.scrollIntoView({block:'start'}));} }
+  if(linkedProfession) {
+    const scrollToOffer = async () => {
+      await document.fonts.ready;
+      requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView({block:'start',behavior:'instant'}));
+    };
+    if(document.readyState === 'complete') void scrollToOffer();
+    else window.addEventListener('load', scrollToOffer, { once: true });
+  }
+  if(location.hash==='#base') { activate(0); const base=document.querySelector<HTMLElement>('#base'); if(base)requestAnimationFrame(()=>base.scrollIntoView({block:'start'})); }
   const tabBar=document.querySelector<HTMLElement>('.prototype-tabs')!;
   new ResizeObserver(()=>document.documentElement.style.setProperty('--prototype-tabs-h', `${tabBar.offsetHeight}px`)).observe(tabBar);
   tabs.forEach((tab,i)=>{tab.addEventListener('click',()=>activate(i));tab.addEventListener('keydown',e=>{let n=i;if(e.key==='ArrowRight')n=(i+1)%tabs.length;else if(e.key==='ArrowLeft')n=(i-1+tabs.length)%tabs.length;else if(e.key==='Home')n=0;else if(e.key==='End')n=tabs.length-1;else return;e.preventDefault();activate(n);tabs[n].focus();});});
@@ -124,8 +155,7 @@ const slides = await heroSlides('viz');
   .prototype-faq summary { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:63px; padding:12px 0; cursor:pointer; font-size:var(--type-body); font-weight:600; list-style:none; }
   .prototype-faq summary::-webkit-details-marker { display:none; }
   .prototype-faq-plus { flex-shrink:0; color:var(--color-muted); font-size:var(--type-title); transition:transform .2s; }
-  .prototype-faq details[open] .prototype-faq-plus, .prototype-base[open] .prototype-faq-plus { transform:rotate(45deg); }
-  .prototype-base > summary { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .prototype-faq details[open] .prototype-faq-plus { transform:rotate(45deg); }
   .prototype-faq details p { max-width:68ch; color:var(--color-ink-2); margin:0; padding-bottom:20px; }
   @media(max-width:767.98px) { .prototype-faq-layout { grid-template-columns:1fr; gap:61px; } .prototype-faq-heading { position:static; } }
   @media(max-width:560px) { .prototype-faq-layout { gap:25px; } .prototype-faq summary { min-height:59px; padding:13px 0; } }
@@ -166,6 +196,7 @@ const slides = await heroSlides('viz');
   .prototype-free-links { display:flex; flex-wrap:wrap; gap:12px; }
   .prototype-free-links a { max-width:100%; white-space:normal; }
   .prototype-section-title { margin:var(--space-sub) 0 var(--space-head); padding-block:16px; border-bottom:1px solid var(--color-line); }
+  .prototype-packages-link { white-space:nowrap; text-decoration-color:currentColor; }
   .prototype-addon-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--gap-grid); margin-top:var(--space-head); }
   .prototype-addon-grid article { border-radius:var(--radius-card); display:flex; flex-direction:column; align-items:flex-start; min-width:0; padding:24px; border-top:1px solid var(--color-line-strong); background:var(--color-surface); }
   .prototype-addon-grid article > .t-overline { color:var(--color-muted); margin:0; }
@@ -175,44 +206,36 @@ const slides = await heroSlides('viz');
   .prototype-course-select input { width:24px; height:24px; flex-shrink:0; accent-color:var(--color-lime); cursor:pointer; }
   .prototype-course-select:has(:checked) { border-color:var(--color-lime); }
   .prototype-addon-buy { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; width:100%; padding-top:24px; margin-top:auto; }
+  .prototype-addon-buy--pending { margin-top:0; }
   .prototype-section-head { margin:40px 0 24px; border-top:1px solid var(--color-line); padding-top:24px; }
   .prototype-section-head .t-overline { color:var(--color-muted); margin:0 0 12px; }
   .prototype-section-head > p:last-child { margin:16px 0 0; }
-  .prototype-course-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--gap-grid); }
+  /* Размеры и раскладка карточек совпадают с каталогом «Все курсы». */
+  .prototype-course-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:stretch; }
+  @media(min-width:768px) { .prototype-course-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media(min-width:1280px) { .prototype-course-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; } }
   .prototype-course-grid > div { min-width:0; display:flex; flex-direction:column; }
   .prototype-course-grid > div > :global(.catalog-card) { flex:1; }
   .prototype-course-grid :global(.course-art) { flex-shrink:0; }
-  .prototype-course-grid :global(.catalog-card--framed .course-body), .prototype-base-card :global(.catalog-card--framed .course-body) { padding:20px; gap:8px; }
-  .prototype-course-grid :global(.course-title), .prototype-base-card :global(.course-title) { font-size:var(--type-title); margin:0; }
-  .prototype-course-grid :global(.course-description), .prototype-base-card :global(.course-description) { -webkit-line-clamp:2; }
-  .prototype-course-grid :global(.course-footer), .prototype-base-card :global(.course-footer) { padding-top:8px; gap:12px; flex-direction:column; align-items:stretch; }
-  .prototype-course-grid :global(.course-select), .prototype-base-card :global(.course-select) { width:100%; min-height:52px; justify-content:center; gap:12px; padding:0 16px; }
-  .prototype-course-grid :global(.course-select input), .prototype-base-card :global(.course-select input) { width:24px; height:24px; flex-shrink:0; }
+  .prototype-course-grid :global(.course-description) { -webkit-line-clamp:2; }
 
   .prototype-addon-grid article { padding:20px; }
 
-  .prototype-course-grid > div > p { margin:0 0 12px; }
-  /* «Начинаете с нуля?»: лаймовое поле, текст тёмный; карточка базы внутри остаётся тёмной */
-  .prototype-base { margin-top:var(--space-head); border:0; padding:24px; background:var(--color-lime); color:var(--color-bg); }
-  .prototype-base > summary { color:var(--color-bg); font-weight:700; }
-  .prototype-base > p { color:rgb(17 19 19 / .78) !important; }
-  .prototype-base :focus-visible { outline-color:var(--color-bg); }
-  .prototype-base summary { cursor:pointer; }
-  .prototype-base > p { margin:20px 0; }
-  .prototype-base-card { max-width:440px; }
+  .prototype-course-grid > div > p { margin:0 0 var(--stack-tight); }
+  .prototype-offers { margin-top:var(--space-sub); scroll-margin-top:calc(var(--header-h) + var(--prototype-tabs-h, 85px) + var(--space-head)); }
   /* Плашки дополнительного курса из админки («Рекомендуем», «Высокий рейтинг») */
   .addon-badges { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .addon-badge { display:inline-flex; align-items:center; min-height:26px; padding:3px 10px; border-radius:var(--radius-chip); font-size:var(--type-label); font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
   .addon-badge--lime { background:var(--color-lime); color:var(--color-bg); }
   .addon-badge--light { background:var(--color-ink); color:var(--color-bg); }
   .addon-badge--dark { border:1px solid var(--color-line-strong); color:var(--color-ink); }
-  @media(max-width:1023.98px){.prototype-course-grid,.prototype-addon-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:1023.98px){.prototype-addon-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
   @media(max-width:767.98px){.prototype-heading{grid-template-columns:1fr;gap:20px;}}
-  @media(max-width:767px){.prototype-heading,.prototype-course-grid,.prototype-addon-grid{grid-template-columns:1fr;}.prototype-heading{gap:20px;}}
+  @media(max-width:767px){.prototype-heading,.prototype-addon-grid{grid-template-columns:1fr;}.prototype-heading{gap:20px;}}
 </style>
 
 <style is:global>
-.prototype-panel .course-select, .prototype-panel .prototype-course-select {
+.prototype-panel .prototype-course-select {
   display:flex; align-items:center; justify-content:center; gap:12px;
   width:100%; min-height:52px; padding:0 16px; box-sizing:border-box;
   border:1px solid var(--color-line-strong); border-radius:var(--radius-card);
@@ -220,7 +243,7 @@ const slides = await heroSlides('viz');
 }
 .prototype-panel .course-select input, .prototype-panel .prototype-course-select input {
   appearance:none; -webkit-appearance:none; display:grid; place-content:center;
-  width:24px; height:24px; margin:0; flex-shrink:0; border:1px solid var(--color-line-strong);
+  margin:0; flex-shrink:0; border:1px solid var(--color-line-strong);
   border-radius:2px; background:transparent; cursor:pointer;
 }
 .prototype-panel [data-cart-select]::after {

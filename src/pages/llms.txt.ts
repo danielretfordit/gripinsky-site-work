@@ -13,9 +13,9 @@ export const GET: APIRoute = async () => {
   const courses = (await getCollection('courses', (c) => isListed(c.data) && c.data.type !== 'service' && !c.data.landing))
     .sort((a, b) => a.data.title.localeCompare(b.data.title, 'ru'));
   const url = (path: string) => SITE + path;
-  const line = (c: (typeof courses)[number]) => `- [${c.data.title}](${url(courseHref(c.id, c.data))}): ${c.data.price > 0 ? `${sp(c.data.price)} ₽` : 'бесплатно'}`;
-  const paid = courses.filter((c) => c.data.price > 0);
-  const free = courses.filter((c) => c.data.price === 0);
+  const line = (c: (typeof courses)[number]) => `- [${c.data.title}](${url(courseHref(c.id, c.data))}): ${c.data.pricePending ? 'стоимость уточняется' : c.data.price > 0 ? `${sp(c.data.price)} ₽` : 'бесплатно'}`;
+  const paid = courses.filter((c) => c.data.pricePending || c.data.price > 0);
+  const free = courses.filter((c) => !c.data.pricePending && c.data.price === 0);
 
   const body = [
     `# ${site.brand}`,

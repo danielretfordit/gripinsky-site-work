@@ -8,6 +8,7 @@ import CourseContent from '../components/CourseContent.astro';
 import CourseVisualContent from '../components/CourseVisualContent.astro';
 import PromoBanner from '../components/PromoBanner.astro';
 import CourseHero from '../components/CourseHero.astro';
+import CourseTerms from '../components/CourseTerms.astro';
 import { TYPE_LABEL, isListed } from '../lib/categories';
 import { personMap } from '../lib/people';
 import { rub, sp } from '../lib/format';
@@ -40,9 +41,9 @@ const related = (c.related.length
   : allCourses.filter((x) => x.data.type !== 'service' && x.data.professions.some((p) => c.professions.includes(p)))
 ).slice(0, 3);
 const isSessionPackage = id === 'paket_ind5' || id === 'paket_ind10';
-const isFree = c.type === 'free' || c.price === 0;
+const isFree = !c.pricePending && (c.type === 'free' || c.price === 0);
 const retiredPackage = c.type === 'package';
-const visualCourse = c.type === 'course' && c.status === 'active' && !['ai','ai-lab'].includes(id);
+const visualCourse = c.type === 'course' && !c.pricePending && c.status === 'active' && !['ai','ai-lab'].includes(id);
 const Content = visualCourse ? CourseVisualContent : CourseContent;
 const hidden = c.status !== 'active';
 
@@ -52,24 +53,25 @@ const title = c.seo.title || `${c.title}: ${isFree ? 'бесплатный ми�
 const lead = (c.description || c.short || '').replace(/\s+/g, ' ').trim().replace(/([^.!?])$/, '$1.');
 const description = c.seo.description
   ? c.seo.description.replace(/\{price\}/g, sp(c.price))
-  : clipText(`${c.title}. ${lead === '.' ? '' : lead} Онлайн-обучение в Академии 3D GRIPINSKY${isFree ? ', бесплатно' : `, ${sp(c.price)} ₽, рассрочка`}.`, 200);
+  : clipText(`${c.title}. ${lead === '.' ? '' : lead} Онлайн-обучение в Академии 3D GRIPINSKY${c.pricePending ? ', стоимость уточняется' : isFree ? ', бесплатно' : `, ${sp(c.price)} ₽, рассрочка`}.`, 200);
 const og = c.cover ? ogHref(`course-${id}`) : undefined;
 const crumbs = [{ name: 'Главная', href: '/' }, { name: 'Курсы', href: '/courses' }, ...(vizRelated ? [{ name: '3D-визуализация', href: '/courses-page/visualization' }] : []), { name: c.title }];
-const ld = courseLd({ name: c.title, description: c.description || c.short || c.title, path: c.legacyPath, prices: retiredPackage ? [] : [c.price], image: og });
+const ld = courseLd({ name: c.title, description: c.description || c.short || c.title, path: c.legacyPath, prices: retiredPackage || c.pricePending ? [] : [c.price], image: og });
 const meta = [c.meta, c.lessons && !c.meta ? `${c.lessons} видеоуроков` : null, c.level].filter(Boolean) as string[];
 ---
 <Base title={title} description={description} ogImage={og} breadcrumbs={crumbs} jsonLd={retiredPackage ? [] : [ld]} noindex={hidden} consultContext={`Курс: ${c.title}`}>
   {visualCourse ? <><div class="wrap pt-5 md:pt-7"><Breadcrumbs items={crumbs} /></div><CourseHero course={c} id={id} /></> : <section class="wrap pt-5 md:pt-7" aria-labelledby="course-title">
     <Breadcrumbs items={crumbs} class="mb-6" />
-    <div class="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+    <div class:list={["grid items-center gap-8 md:gap-12", c.cover && "md:grid-cols-2"]}>
       <div class="flex min-w-0 flex-col gap-5">
         <span class="t-overline">{TYPE_LABEL[c.type]}</span>
         <h1 id="course-title" class="t-display normal-case">{c.title}</h1>
         {(c.short || c.description) && <p class="t-lead">{c.short && c.short.toLowerCase() !== c.title.toLowerCase() ? c.short : c.description || c.short}</p>}
         {meta.length > 0 && <p class="t-small m-0 text-ink-2">{meta.join(', ')}</p>}
         {c.software.length > 0 && <p class="t-small m-0 text-muted">{c.software.join(', ')}</p>}
+        <CourseTerms course={c} />
         <div class="flex flex-wrap gap-3">
-          <a href="#course-price" class="btn btn-primary">{retiredPackage ? 'Выбрать курсы' : isFree ? 'Получить доступ' : c.type === 'course' ? `Выбрать курс, ${rub(c.price)}` : `Стоимость, ${rub(c.price)}`}</a>
+          <a href={c.pricePending ? "#consult" : "#course-price"} class="btn btn-primary">{c.pricePending ? 'Уточнить стоимость' : retiredPackage ? 'Выбрать курсы' : isFree ? 'Получить доступ' : c.type === 'course' ? `Выбрать курс, ${rub(c.price)}` : `Стоимость, ${rub(c.price)}`}</a>
           {(c.modules.length > 0 || c.blocks.length > 0) && <a href="#course-program" class="btn btn-secondary">Программа</a>}
         </div>
         {c.trial && <a href={c.trial} class="link t-small self-start">Попробовать бесплатные уроки</a>}
@@ -88,6 +90,13 @@ const meta = [c.meta, c.lessons && !c.meta ? `${c.lessons} видеоуроко�
       <div class="card flex flex-col gap-4 p-6 md:p-8">
         {retiredPackage ? (
           <><span class="t-h3">Соберите свой пакет</span><p class="text-ink-2">Этот готовый пакет больше не продаётся. Выберите нужные курсы отдельно, скидка рассчитается в корзине.</p><a href="/courses" class="btn btn-primary">Выбрать курсы</a><a href="/courses-page/visualization#base" class="link">База 3D-визуализатора остаётся доступна целиком</a></>
+        ) : c.pricePending ? (
+          <>
+            <span class="t-title">Стоимость уточняется</span>
+            <p class="t-body text-ink-2">Уточните стоимость курса и полного набора на консультации.</p>
+            <CourseTerms course={c} compact />
+            <a href="#consult" class="btn btn-primary btn-block">Уточнить стоимость</a>
+          </>
         ) : isFree ? (
           <>
             <span class="t-num text-ink">Бесплатно</span>
@@ -102,6 +111,7 @@ const meta = [c.meta, c.lessons && !c.meta ? `${c.lessons} видеоуроко�
             </span>
             {c.oldPrice && c.oldPrice > c.price && (c.type === 'package' || isSessionPackage) && <span class="t-small text-ink-2">{isSessionPackage ? 'Занятия' : 'Курсы пакета'} по отдельности стоят {rub(c.oldPrice)}, выгода {rub(c.oldPrice - c.price)}</span>}
             <span class="t-small text-muted">или {sp(Math.ceil(c.price / months))}&nbsp;₽/мес в рассрочку на {months} мес.</span>
+            <CourseTerms course={c} compact />
             {c.type === 'course' ? <button type="button" class="btn btn-primary btn-lg btn-block" data-cart-add={id} disabled><span data-cart-label>В корзину</span></button> : <button type="button" class="btn btn-primary btn-lg btn-block" data-buy={JSON.stringify({ kind: 'course', id, name: c.title, price: c.price })}>Выбрать услугу</button>}
             <a href={`${site.telegramBot}?start=installment`} class="btn btn-secondary btn-block">Оформить рассрочку</a>
           </>

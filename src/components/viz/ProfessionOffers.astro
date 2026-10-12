@@ -1,0 +1,119 @@
+---
+import { rub, typo } from '../../lib/format';
+
+interface OfferItem {
+  title: string;
+  href: string;
+}
+
+interface Props {
+  professionId: string;
+  professionTitle: string;
+  portfolio: string;
+  base: { title: string; items: OfferItem[]; gifts: string[]; price: number };
+  full: { title: string; items: OfferItem[]; gifts: string[]; ids: string[]; price: number | null };
+}
+
+const { professionId, professionTitle, portfolio, base, full } = Astro.props;
+const headingId = `profession-offers-title-${professionId}`;
+const fullIds = full.ids.join(',');
+const baseLabel = 'Выбрать базу';
+const fullLabel = 'Выбрать профессию целиком';
+---
+
+<section class="profession-offers" aria-labelledby={headingId}>
+  <header class="profession-offers__heading">
+    <h3 id={headingId} class="t-h3">Хотите пройти весь путь? Выберите готовый набор</h3>
+    <p class="t-body">В полном наборе база уже включена. Можно выбрать готовую программу или отдельные курсы выше.</p>
+  </header>
+
+  <div class="profession-offers__grid">
+    <article class="profession-offer" data-bundle-offer="baza" aria-labelledby={`base-offer-title-${professionId}`}>
+      <div class="profession-offer__heading">
+        <p class="t-overline">Общие основы</p>
+        <h4 id={`base-offer-title-${professionId}`} class="t-h3">{typo(base.title)}</h4>
+      </div>
+      <div class="profession-offer__contents">
+        <p class="t-small profession-offer__label">В программе</p>
+        <ul class="profession-offer__list t-small">
+          {base.items.map(item => <li><a href={item.href}>{typo(item.title)}</a></li>)}
+        </ul>
+      </div>
+      {base.gifts.length > 0 && <div class="profession-offer__contents">
+        <p class="t-small profession-offer__label">В подарок</p>
+        <ul class="profession-offer__list t-small">
+          {base.gifts.map(gift => <li>{typo(gift)}</li>)}
+        </ul>
+      </div>}
+      <div class="profession-offer__purchase">
+        <div class="profession-offer__price">
+          <p class="t-num" data-bundle-price aria-live="polite">{rub(base.price)}</p>
+          <p class="t-caption" data-bundle-support>С чатом поддержки</p>
+        </div>
+        <button type="button" class="btn btn-secondary" data-cart-bundle="baza" data-cart-default-label={baseLabel} disabled>
+          <span data-cart-bundle-label>{baseLabel}</span>
+        </button>
+      </div>
+    </article>
+
+    <article class="profession-offer" data-bundle-offer={fullIds} data-bundle-pending={full.price === null ? 'true' : undefined} aria-label={`Набор: ${professionTitle}`}>
+      <div class="profession-offer__heading">
+        <p class="t-overline">Профессия с нуля</p>
+        <h4 class="t-h3">{typo(full.title)}</h4>
+        <p class="t-small profession-offer__included">База уже включена</p>
+      </div>
+      <div class="profession-offer__contents">
+        <p class="t-small profession-offer__label">В программе</p>
+        <ul class="profession-offer__list t-small">
+          {full.items.map(item => <li><a href={item.href}>{typo(item.title)}</a></li>)}
+        </ul>
+      </div>
+      {full.gifts.length > 0 && <div class="profession-offer__contents">
+        <p class="t-small profession-offer__label">В подарок</p>
+        <ul class="profession-offer__list t-small">
+          {full.gifts.map(gift => <li>{typo(gift)}</li>)}
+        </ul>
+      </div>}
+      {portfolio && <p class="t-small profession-offer__result"><span>В вашем портфолио:</span> {portfolio}</p>}
+      <div class="profession-offer__purchase">
+        <div class="profession-offer__price">
+          <p class:list={[full.price === null ? 't-title' : 't-num']} data-bundle-price aria-live="polite">{full.price === null ? 'Стоимость уточняется' : rub(full.price)}</p>
+          {full.price !== null && <p class="t-caption" data-bundle-support>С чатом поддержки</p>}
+        </div>
+        {full.price === null
+          ? <a href="#consult" class="btn btn-primary">Уточнить стоимость набора</a>
+          : <button type="button" class="btn btn-primary" data-cart-bundle={fullIds} data-cart-default-label={fullLabel} disabled>
+              <span data-cart-bundle-label>{fullLabel}</span>
+            </button>}
+      </div>
+    </article>
+  </div>
+</section>
+
+<style>
+  .profession-offers { min-width: 0; padding: var(--pad-l); border-radius: var(--radius-card); background: var(--color-lime); color: var(--color-bg); }
+  .profession-offers__heading { display: grid; gap: var(--stack-lead); margin-bottom: var(--space-head); }
+  .profession-offers__heading h3, .profession-offers__heading p { margin: 0; color: inherit; }
+  .profession-offers__heading h3 { scroll-margin-top: calc(var(--prototype-tabs-h, 85px) + var(--space-head)); }
+  .profession-offers__heading p { max-width: 72ch; }
+  .profession-offers__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap-grid); align-items: start; }
+  .profession-offer { display: flex; min-width: 0; flex-direction: column; gap: var(--stack-lead); padding: var(--pad-l); border-radius: var(--radius-card); background: var(--color-surface); color: var(--color-ink); }
+  .profession-offer__heading { display: grid; gap: var(--stack-tight); }
+  .profession-offer__heading p, .profession-offer__heading h4 { margin: 0; }
+  .profession-offer__heading h4 { scroll-margin-top: calc(var(--header-h) + var(--prototype-tabs-h, 85px) + var(--space-head)); }
+  .profession-offer__included { color: var(--color-ink-2); }
+  .profession-offer__contents { display: grid; gap: var(--stack-tight); }
+  .profession-offer__label { margin: 0; font-weight: 600; color: var(--color-ink); }
+  .profession-offer__list { display: grid; gap: var(--stack-tight); margin: 0; padding: 0; list-style: none; color: var(--color-ink-2); }
+  .profession-offer__list a { color: inherit; text-decoration: underline; text-decoration-color: var(--color-line-strong); text-underline-offset: .2em; }
+  .profession-offer__result { margin: 0; color: var(--color-ink-2); }
+  .profession-offer__result span { color: var(--color-ink); font-weight: 600; }
+  .profession-offer__purchase { display: grid; gap: var(--stack-action); margin-top: auto; padding-top: var(--stack-tight); }
+  .profession-offer__price { display: grid; gap: var(--stack-tight); }
+  .profession-offer__price p { margin: 0; }
+  .profession-offer__price .t-caption { color: var(--color-muted); }
+  .profession-offer__purchase .btn { width: 100%; min-width: 0; white-space: normal; text-align: center; }
+  .profession-offer :focus-visible { outline-color: var(--color-lime); }
+  @media (min-width: 768px) { .profession-offers__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (hover: hover) { .profession-offer__list a:hover { color: var(--color-ink); text-decoration-color: currentColor; } }
+</style>

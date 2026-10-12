@@ -1,5 +1,6 @@
 ---
 import { Image } from 'astro:assets';
+import { courseFigurine } from '../lib/course-figurines';
 import type { WorkView } from '../lib/works';
 import type { CollectionEntry } from 'astro:content';
 import { TYPE_LABEL, courseHref } from '../lib/categories';
@@ -10,6 +11,7 @@ import { activePromoPrices } from '../lib/promotions';
 interface Props { selectable?: boolean; course: CollectionEntry<'courses'>; headingLevel?: 'h2' | 'h3'; framed?: boolean; work?: WorkView; result?: string }
 const { course, headingLevel: H = 'h3', framed = false, selectable = false, work, result } = Astro.props;
 const c = course.data;
+const figurine = courseFigurine(course.id);
 // Акция из админки: акционная цена, реальная каталожная зачёркнута, срок «до …» без таймеров
 const promo = (await activePromoPrices()).get(course.id);
 const price = promo?.price ?? c.price;
@@ -19,27 +21,29 @@ const level = c.level?.includes(',') ? 'Любой уровень' : c.level;
 const software = c.software.map(softwareName);
 const separatePrice = c.type === 'package' || course.id.startsWith('paket_ind');
 // Подпись ссылки по сути карточки: у услуги нет «программы курса»
-const moreLabel = c.type === 'course' ? 'Программа курса' : c.type === 'package' ? 'Состав пакета' : c.type === 'free' ? 'Смотреть уроки' : 'Подробнее';
+const moreLabel = c.pricePending ? 'О курсе' : c.type === 'course' ? 'Программа курса' : c.type === 'package' ? 'Состав пакета' : c.type === 'free' ? 'Смотреть уроки' : 'Подробнее';
 // Описание, которое повторяет название, не показываем
 const description = c.short && c.short.trim().toLowerCase() !== c.title.trim().toLowerCase() ? c.short : '';
 ---
-<article class:list={["catalog-card group relative flex flex-col", { "content-card catalog-card--framed": framed }]} data-course data-type={course.id === 'baza' ? 'course' : c.type} data-tags={filters} data-price={price}
+<article class:list={["catalog-card group relative flex flex-col", { "content-card catalog-card--framed": framed, "catalog-card--figurine": !!figurine }]} data-course data-type={course.id === 'baza' ? 'course' : c.type} data-tags={filters} data-price={c.pricePending ? undefined : price} data-price-pending={c.pricePending ? 'true' : undefined}
   data-new={Number(c.isNew)} data-published={c.publishedAt ?? ''} data-popularity={c.popularityRank ?? ''}>
   <a href={href} class="course-card-link absolute inset-0 z-[1]" aria-label={c.title} tabindex="-1" aria-hidden="true"></a>
-  <div class="course-art">
-    {(work?.image || c.cover) && <Image src={work?.image || c.cover!} alt={work?.alt ?? ''} widths={[400, 640, 960]} sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" class="course-image" loading="lazy" />}
+  <div class="course-art" style={figurine ? "z-index:2" : undefined}>
+    {figurine && <><a href={href} class="figurine-cover-link" aria-label={c.title} tabindex="-1" aria-hidden="true"></a><div class="figurine-shadow" aria-hidden="true"></div><div class="figurine-object"><img src={figurine.clay} alt="" class="figurine-clay" loading="lazy"/><img src={figurine.color} alt="" class="figurine-color" loading="lazy"/></div></>}
+    {!figurine && (work?.image || c.cover) && <Image src={work?.image || c.cover!} alt={work?.alt ?? ''} widths={[400, 640, 960]} sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" class="course-image" loading="lazy" />}
     <div class="course-art-top">
-      {level && <span class="art-label">{level}</span>}
+      {!figurine && level && <span class="art-label">{level}</span>}
       {c.isNew && <span class="art-label art-new">Новый курс</span>}
       {c.badges.map((b) => <span class:list={['art-label', 'art-badge', `art-badge--${b.tone}`]}>{b.text}</span>)}
     </div>
-    {software.length > 0 && <div class="course-art-bottom" aria-label="Программы">
+    {!figurine && software.length > 0 && <div class="course-art-bottom" aria-label="Программы">
       {software.slice(0, 2).map((name) => <span class="art-software">{name}</span>)}
       {software.length > 2 && <span class="art-software" title={software.slice(2).join(', ')}>+{software.length - 2}<span class="sr-only">: {software.slice(2).join(', ')}</span></span>}
     </div>}
   </div>
   <div class="course-body">
-    {work && <p class="t-caption text-muted m-0">Работа ученика: {work.author}</p>}
+    {figurine && <p class="t-meta figurine-meta">{software.slice(0,2).join(" / ")}{level ? ` / ${level}` : ""}</p>}
+    {!figurine && work && <p class="t-caption text-muted m-0">Работа ученика: {work.author}</p>}
     <span class="course-kicker t-overline">{TYPE_LABEL[c.type]}{c.lessons ? ` / ${c.lessons} ${plural(c.lessons, ['урок', 'урока', 'уроков'])}` : ''}</span>
     <H class="course-title t-h3"><a href={href} class="text-ink relative z-10 hover:text-white">{typo(c.title)}</a></H>
     {description && <p class="course-description t-small">{description}</p>}
@@ -47,13 +51,13 @@ const description = c.short && c.short.trim().toLowerCase() !== c.title.trim().t
     <a href={href} class="link t-small relative z-10 self-start">{moreLabel}&nbsp;→</a>
     <div class="course-footer">
       <span class="course-price">
-        <b class="t-title">{course.id === 'baza' ? 'от ' : ''}{price > 0 ? rub(price) : 'Бесплатно'}</b>
-        {promo && <span class="course-promo"><s>{rub(c.price)}</s> {promo.label} {promo.until}</span>}
-        {!promo && c.oldPrice && c.oldPrice > c.price && (separatePrice
+        <b class="t-title">{c.pricePending ? 'Стоимость уточняется' : `${course.id === 'baza' ? 'от ' : ''}${price > 0 ? rub(price) : 'Бесплатно'}`}</b>
+        {!c.pricePending && promo && <span class="course-promo"><s>{rub(c.price)}</s> {promo.label} {promo.until}</span>}
+        {!c.pricePending && !promo && c.oldPrice && c.oldPrice > c.price && (separatePrice
           ? <span>по отдельности {rub(c.oldPrice)}</span>
           : <s>{rub(c.oldPrice)}</s>)}
       </span>
-      {c.status === 'active' && (c.type === 'course' || course.id === 'baza') && c.price > 0
+      {c.pricePending ? <a href={`${href.split('#')[0]}#consult`} class="link t-small relative z-10">Уточнить стоимость</a> : c.status === 'active' && (c.type === 'course' || course.id === 'baza') && c.price > 0
         ? selectable ? <label class="course-select t-small relative z-10"><input type="checkbox" data-cart-select={course.id} disabled /><span>Выбрать курс</span></label> : <button type="button" data-cart-add={course.id} disabled aria-pressed="false" class="t-small relative z-10 min-h-11 rounded-field border border-line-strong px-3 font-semibold hover:bg-surface-2"><span data-cart-label>В корзину</span></button>
         : <span class="course-open" aria-hidden="true">↗</span>}
     </div>
@@ -99,4 +103,22 @@ const description = c.short && c.short.trim().toLowerCase() !== c.title.trim().t
   }
   .catalog-card:focus-within { outline: 2px solid var(--color-lime); outline-offset: 5px; }
   @media(prefers-reduced-motion: reduce) { .course-image { transition: none; transform: none !important; } }
+</style>
+
+<style>
+.catalog-card--figurine { border:1px solid var(--color-line); border-radius:var(--radius-card); overflow:hidden; isolation:isolate; background:var(--color-surface); }
+.catalog-card--figurine .course-art { background:transparent; overflow:visible; border-radius:0; }
+.catalog-card--figurine .course-body { background:transparent; padding:12px 20px 20px; gap:10px; }
+.catalog-card--figurine .course-footer { border-top:1px solid var(--color-line); padding-top:14px; gap:12px; flex-wrap:wrap; }
+.catalog-card--figurine .course-title { font-size:var(--type-title); line-height:1.2; letter-spacing:-.025em; }
+.catalog-card--figurine .course-kicker { color:var(--color-muted); }
+.figurine-cover-link { position:absolute; inset:0; z-index:3; }
+.figurine-meta { margin:0; color:var(--color-muted); }
+.figurine-object { position:absolute; inset:56px 32px 8px; transition:transform .65s ease; pointer-events:none; }
+.figurine-object img { position:absolute; width:100%; height:100%; object-fit:contain; transition:opacity .75s ease; }
+.figurine-color { opacity:0; }
+.figurine-shadow { position:absolute; left:27%; right:27%; bottom:4%; height:7%; background:var(--color-bg); filter:blur(12px); border-radius:50%; opacity:.5; }
+.catalog-card--figurine .art-new { margin-left:0; background:var(--color-surface); color:var(--color-ink); border-left:2px solid var(--color-lime); }
+@media(hover:hover) { .catalog-card--figurine .course-art:hover .figurine-color { opacity:1; } .catalog-card--figurine .course-art:hover .figurine-clay { opacity:0; } .catalog-card--figurine .course-art:hover .figurine-object { transform:translateY(-4px); } }
+@media(prefers-reduced-motion:reduce) { .figurine-object,.figurine-object img { transition:none; } .catalog-card--figurine .figurine-object { transform:none !important; } }
 </style>

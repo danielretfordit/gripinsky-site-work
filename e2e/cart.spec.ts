@@ -4,7 +4,7 @@ let errors: string[];
 test.beforeEach(async ({ page }) => { await noCookieBanner(page); errors = collectErrors(page); });
 test.afterEach(async () => { expect(errors).toEqual([]); });
 
-test('корзина: добавление, скидка, сохранение, оформление и удаление', async ({ page }) => {
+test('корзина: добавление, скидка, сохранение, оформление и удаление', async ({ page }, testInfo) => {
   await page.goto('/courses?type=course');
   await expectIslandsHydrated(page);
   const dialog = page.locator('[data-cart-dialog]');
@@ -13,10 +13,11 @@ test('корзина: добавление, скидка, сохранение, 
   await expect(page.locator('[data-site-cart]')).toContainText('10 900');
   await dialog.getByRole('button', { name: 'Продолжить выбор' }).click();
   await page.locator('[data-cart-add="modeling2"]').click();
+  await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Скидка за курсы 15%');
   await expect(page.locator('[data-site-cart]')).toContainText('19 380');
   await expectNoHorizontalOverflow(page);
-  await page.screenshot({ path: `docs/design/shots/cart-${page.viewportSize()!.width}.png` });
+  await page.screenshot({ path: testInfo.outputPath(`cart-${page.viewportSize()!.width}.png`) });
   await dialog.getByRole('button', { name: 'Продолжить выбор' }).click();
   await page.reload();
   await expectIslandsHydrated(page);
@@ -61,6 +62,38 @@ test('база сохраняется, три уровня доступны от
   await expect(dialog).toContainText('Level 1');
 });
 
+test('сроки видны в корзине и меняются с форматом обучения', async ({ page }) => {
+  await page.goto('/courses?cart=materialspro,blender');
+  await expectIslandsHydrated(page);
+  await expect(page.locator('[data-course] .course-terms')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Открыть корзину', exact: true }).click();
+  const dialog = page.locator('[data-cart-dialog]');
+  const materials = dialog.locator('[data-cart-terms="materialspro"]');
+  const blender = dialog.locator('[data-cart-terms="blender"]');
+  await expect(materials).toContainText('Доступ к урокам24 мес.');
+  await expect(materials).toContainText('Чат поддержки12 мес.');
+  await expect(blender).toContainText('Доступ к урокам12 мес.');
+  await expect(blender).toContainText('Чат поддержки9 мес.');
+  await dialog.getByRole('radio', { name: 'Самостоятельно', exact: true }).check();
+  await expect(materials).toContainText('Без поддержки');
+  await expect(blender).toContainText('Без поддержки');
+  await expect(materials).not.toContainText('Чат поддержки');
+  await expect(materials).toContainText('Доступ к урокам24 мес.');
+  await dialog.getByRole('radio', { name: 'С чатом поддержки', exact: true }).check();
+  await expect(materials).toContainText('Чат поддержки12 мес.');
+  await expectNoHorizontalOverflow(page);
+
+  await page.goto('/courses?cart=baza');
+  await expectIslandsHydrated(page);
+  await page.getByRole('button', { name: 'Открыть корзину', exact: true }).click();
+  const base = dialog.locator('[data-cart-base-terms]');
+  await expect(base.locator('[data-cart-terms]')).toHaveCount(3);
+  await expect(base.locator('[data-cart-terms="modeling1"]')).toContainText('Доступ к урокам12 мес.');
+  await expect(dialog.locator('[data-cart-terms="ai"]')).toHaveCount(1);
+  await dialog.getByRole('radio', { name: 'Самостоятельный', exact: true }).check();
+  await expect(base.locator('[data-cart-terms="modeling1"]')).toContainText('Без поддержки');
+});
+
 test('старые пакеты доступны по URL, но не продаются', async ({ page }) => {
   await page.goto('/1-2-3lvl');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -78,7 +111,7 @@ test('страница направления добавляет выбор в �
 
 });
 
-test('API отклоняет пустую корзину, старый пакет и неизвестные позиции', async ({ request }) => {
+test('API отклоняет пустую корзину, старый пакет и неизвестные позиции', async ({ request, baseURL }) => {
   const customer = { name: 'Проверка', email: 'test@example.invalid', phone: '+70000000000' };
   for (const data of [
     { kind: 'set', selection: { ids: [], support: 'chat' } },
@@ -87,7 +120,7 @@ test('API отклоняет пустую корзину, старый паке�
     { kind: 'course', selection: { id: '1-2-3lvl' } },
     { kind: 'invalid', selection: {} },
   ]) {
-    const response = await request.post('/api/checkout', { data: { ...data, customer, consent: true } });
+    const response = await request.post('/api/checkout', { headers: { Origin: new URL(baseURL!).origin }, data: { ...data, customer, consent: true } });
     expect(response.status()).toBe(422);
   }
 });

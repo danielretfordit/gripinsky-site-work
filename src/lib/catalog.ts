@@ -18,7 +18,7 @@ export async function getCatalog(): Promise<Catalog> {
   // Акции из админки: акционная цена вместо каталожной (даты проверяются в момент расчёта)
   const promos = await activePromoPrices();
   const setCourses = Object.fromEntries(
-    [...courses].filter(([, c]) => c.type === 'course' && c.status === 'active' && c.price > 0)
+    [...courses].filter(([, c]) => c.type === 'course' && c.status === 'active' && !c.pricePending && c.price > 0)
       .map(([id, c]) => {
         const promo = promos.get(id)?.price;
         const price = promo ?? c.price;
@@ -40,7 +40,7 @@ export async function getCatalog(): Promise<Catalog> {
         gift: { id: p.data.gift.course.id, name: gift.title, value: gift.price || null },
         addons: p.data.addons.map((a) => {
           const c = course(a.course.id);
-          return { id: a.course.id, name: c.title, price: c.status === 'active' && c.price > 0 ? c.price : null };
+          return { id: a.course.id, name: c.title, price: c.status === 'active' && !c.pricePending && c.price > 0 ? c.price : null };
         }),
       }];
     }),
@@ -59,6 +59,9 @@ export async function getCatalog(): Promise<Catalog> {
     tariffs,
     professions,
     courses: setCourses,
+    termsById: Object.fromEntries([...courses]
+      .filter(([, c]) => c.accessDuration || c.supportDuration)
+      .map(([id, c]) => [id, { accessDuration: c.accessDuration, supportDuration: c.supportDuration }])),
     tiers: [...site.bundle.tiers].sort((a, b) => a.min - b.min),
     installmentMonths: site.installment.months,
   };

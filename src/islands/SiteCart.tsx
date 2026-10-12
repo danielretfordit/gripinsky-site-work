@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { useStore } from '@nanostores/preact';
 import { $cart, $cartOpen, CART_KEY, initializeCart, normalizeCart, addCourses, removeCourse, setCartSupport } from '../stores/cart';
 import { openCheckout } from '../stores/package';
@@ -15,6 +15,8 @@ export default function SiteCart({ cat, discountGuide = false }: { cat: Catalog;
   const count = q.count;
   useEffect(() => {
     initializeCart(cat);
+    const bundleIds = (button: HTMLButtonElement) => [...new Set((button.dataset.cartBundle ?? '').split(',').filter(Boolean))];
+    const availableBundle = (ids: string[]) => ids.length > 0 && ids.every(id => id === cat.base.id || Object.hasOwn(cat.courses, id));
     const updateButtons = () => {
       document.querySelectorAll<HTMLInputElement>('[data-cart-select]').forEach(input => {
         const id = input.dataset.cartSelect!;
@@ -30,6 +32,23 @@ export default function SiteCart({ cat, discountGuide = false }: { cat: Catalog;
       const label = b.querySelector('[data-cart-label]');
       if (label) label.textContent = selected ? 'В корзине' : 'В корзину';
     });
+      const current = normalizeCart(cat, $cart.get());
+      const currentQuote = quoteSet(cat, current);
+      const included = new Set(currentQuote.lines.map(line => line.id));
+      document.querySelectorAll<HTMLButtonElement>('[data-cart-bundle]').forEach(button => {
+        const ids = bundleIds(button);
+        button.disabled = !availableBundle(ids);
+        if (button.disabled) return;
+        const selected = ids.every(id => included.has(id));
+        button.setAttribute('aria-pressed', String(selected));
+        const label = button.querySelector('[data-cart-bundle-label]');
+        if (label) label.textContent = selected ? 'В корзине' : button.dataset.cartDefaultLabel ?? 'Выбрать набор';
+        const offer = button.closest('[data-bundle-offer]');
+        const price = offer?.querySelector('[data-bundle-price]');
+        if (price) price.textContent = rub(quoteSet(cat, { ...current, ids }).total);
+        const support = offer?.querySelector('[data-bundle-support]');
+        if (support) support.textContent = current.support === 'self' ? 'Самостоятельно' : current.tariff === 'mentor' ? 'С наставничеством' : 'С чатом поддержки';
+      });
     };
     const change = (e: Event) => {
       const input = e.target as HTMLInputElement;
@@ -43,6 +62,12 @@ export default function SiteCart({ cat, discountGuide = false }: { cat: Catalog;
       updateButtons();
     });
     const click = (e: MouseEvent) => {
+      const bundle = (e.target as Element)?.closest<HTMLButtonElement>('[data-cart-bundle]');
+      if (bundle) {
+        const ids = bundleIds(bundle);
+        if (!bundle.disabled && availableBundle(ids)) addCourses(ids);
+        return;
+      }
       const b = (e.target as Element)?.closest<HTMLButtonElement>('[data-cart-add]');
       if (!b || b.disabled) return;
       const id = b.dataset.cartAdd!;
@@ -58,7 +83,7 @@ export default function SiteCart({ cat, discountGuide = false }: { cat: Catalog;
     window.addEventListener('storage', storage);
     return () => { unsubscribe(); document.removeEventListener('click', click); document.removeEventListener('change', change); window.removeEventListener('storage', storage); };
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = dialog.current;
     if (!el) return;
     if (expanded && !el.open) { opener.current = document.activeElement as HTMLElement; el.showModal(); }
@@ -82,6 +107,15 @@ export default function SiteCart({ cat, discountGuide = false }: { cat: Catalog;
     openCheckout({ kind: 'set', selection: normalizeCart(cat, cart) });
   };
   const discounted = q.lines.filter((l) => l.kind === 'item').reduce((sum, l) => sum + Math.max(0, (l.value ?? l.price) - l.price), 0);
+  const baseTermIds = cat.base.parts.filter(id => cat.termsById?.[id]);
+  const renderTerms = (id: string) => {
+    const terms = cat.termsById?.[id];
+    if (!terms?.accessDuration && !terms?.supportDuration) return null;
+    return <dl data-cart-terms={id} aria-label="Условия обучения" class="t-caption m-0 mt-2 flex flex-wrap gap-x-4 gap-y-1 text-muted">
+      {terms.accessDuration && <div class="flex gap-1"><dt>Доступ к урокам</dt><dd class="m-0 whitespace-nowrap text-ink-2">{terms.accessDuration}</dd></div>}
+      {terms.supportDuration && <div class="flex gap-1"><dt>{q.support === 'self' ? <span class="sr-only">Поддержка</span> : 'Чат поддержки'}</dt><dd class="m-0 whitespace-nowrap text-ink-2">{q.support === 'self' ? 'Без поддержки' : terms.supportDuration}</dd></div>}
+    </dl>;
+  };
   return <>
     {count > 0 && <div ref={bar} data-site-cart class="site-cart-bar fixed inset-x-0 bottom-0 z-50 border-t border-line-strong bg-bg-2" style={{ paddingTop: '12px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
       <div class="site-cart-bar__inner mx-auto flex w-full max-w-[1440px] min-w-0 items-center gap-3 sm:gap-6">
@@ -105,10 +139,16 @@ export default function SiteCart({ cat, discountGuide = false }: { cat: Catalog;
           <label class="t-caption flex min-h-11 cursor-pointer items-center gap-2 rounded-field border border-line-strong p-2"><input type="radio" name="cart-support" value="mentor" checked={cart.tariff === 'mentor'} onChange={() => $cart.set({ ...cart, tariff: 'mentor', support: 'chat' })} />С наставником (+{rub(cat.tariffs.find(t => t.id === 'mentor')?.extra ?? 0)})</label>
         </div><p class="t-caption mt-2 text-muted">Наставничество: личный наставник на 6 месяцев и 4–6 созвонов с разбором работ.</p></fieldset>}
         {cart.ids.includes(cat.base.id) && <fieldset class="mb-6 border-0 p-0"><legend class="t-small mb-3 text-muted">Формат базы</legend><div class="flex flex-wrap gap-3">{cat.tariffs.map((t) => <label class="t-caption flex min-h-11 cursor-pointer items-center gap-2 rounded-field border border-line-strong p-2"><input type="radio" style={{ accentColor: "var(--color-lime)", width: "16px", height: "16px", flexShrink: 0 }} name="cart-base-tariff" checked={(cart.tariff ?? (cart.support === 'self' ? 'lite' : 'opt')) === t.id} onChange={() => $cart.set({ ...cart, tariff: t.id, support: t.id === 'lite' ? 'self' : 'chat' })} />{t.name}</label>)}</div></fieldset>}
-        <ul class="m-0 list-none p-0">{q.lines.map((line) => <li key={line.id} class="flex items-center gap-3 border-t border-line py-3">
+        <ul class="m-0 list-none p-0">{q.lines.map((line) => <li key={line.id} class="border-t border-line py-3">
+          <div class="flex items-start gap-3">
           <div class="min-w-0 flex-1"><span class="t-small block">{line.name}</span>{line.note && <span class="t-caption text-muted">{line.note}</span>}</div>
           <span class="t-small whitespace-nowrap">{line.kind === 'gift' ? 'В подарок' : line.kind === 'included' ? 'Включено' : rub(line.price)}</span>
           {line.kind === 'item' && <button type="button" class="h-11 w-11 shrink-0 text-xl" aria-label={`Убрать ${line.name}`} onClick={() => removeCourse(line.id)}>×</button>}
+          </div>
+          {renderTerms(line.id)}
+          {line.id === cat.base.id && baseTermIds.length > 0 && <ul data-cart-base-terms aria-label="Условия курсов в базе" class="m-0 mt-3 list-none space-y-3 p-0">
+            {baseTermIds.map(id => <li key={id}><span class="t-caption text-ink-2">{cat.courses[id]?.name ?? id}</span>{renderTerms(id)}</li>)}
+          </ul>}
         </li>)}</ul>
         <details class="t-small my-3 text-muted"><summary class="cursor-pointer py-2 underline">Как считается скидка</summary><p>База считается одной позицией и сохраняет свою цену. Курс профессии вместе с базой получает подарок вместо скидки. Другие курсы получают скидку за количество.</p></details>
         {q.dropped.length > 0 && <div class="t-caption mt-4 text-muted">Уже входят в выбранное обучение: {q.dropped.map((id) => <button class="mr-3 underline" type="button" onClick={() => removeCourse(id)}>{cat.courses[id]?.name ?? id} (убрать из выбора)</button>)}</div>}

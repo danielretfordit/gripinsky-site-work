@@ -42,6 +42,9 @@
     "kamola"
   ],
   "lessons": 14,
-  "meta": "6 шагов пайплайна, доступ 6 месяцев",
-  "isNew": true
+  "meta": "6 шагов пайплайна",
+  "isNew": true,
+  "studyDuration": "1–2 мес.",
+  "accessDuration": "12 мес.",
+  "supportDuration": "6 мес."
 }
